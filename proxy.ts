@@ -1,47 +1,30 @@
-import { Buffer } from "node:buffer";
 import { NextRequest, NextResponse } from "next/server";
+import { COOKIE_NAME, isAuthConfigured, validateSessionToken } from "@/lib/auth";
 
-export function proxy(request: NextRequest) {
-  const username = process.env.DASHBOARD_USER;
-  const password = process.env.DASHBOARD_PASSWORD;
-  const hasLiveDataSecrets = Boolean(
-    process.env.WINDSOR_API_KEY || process.env.SHOPIFY_ADMIN_ACCESS_TOKEN,
-  );
+const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/auth/logout"];
 
-  // Fail closed as soon as live data credentials are present.
-  if (!username || !password) {
-    if (hasLiveDataSecrets) {
-      return new NextResponse("Dashboard protection is not configured.", {
-        status: 503,
-        headers: { "Cache-Control": "no-store" },
-      });
-    }
-    return NextResponse.next();
+export async function proxy(request: NextRequest) {
+  const path = request.nextUrl.pathname;
+  const configured = isAuthConfigured();
+
+  if (!configured) {
+    if (process.env.NODE_ENV !== "production") return NextResponse.next();
+    return new NextResponse("Dashboard protection is not configured.", {
+      status: 503,
+      headers: { "Cache-Control": "no-store" },
+    });
   }
 
-  const header = request.headers.get("authorization");
-  if (header?.startsWith("Basic ")) {
-    try {
-      const decoded = Buffer.from(header.slice(6), "base64").toString("utf8");
-      const separator = decoded.indexOf(":");
-      const suppliedUser = separator >= 0 ? decoded.slice(0, separator) : "";
-      const suppliedPassword = separator >= 0 ? decoded.slice(separator + 1) : "";
+  if (PUBLIC_PATHS.some((p) => path === p || path.startsWith(`${p}/`))) return NextResponse.next();
+  if (path.startsWith("/api/cron/")) return NextResponse.next();
 
-      if (suppliedUser === username && suppliedPassword === password) {
-        return NextResponse.next();
-      }
-    } catch {
-      // Fall through to the authentication challenge.
-    }
-  }
+  const valid = await validateSessionToken(request.cookies.get(COOKIE_NAME)?.value);
+  if (valid) return NextResponse.next();
 
-  return new NextResponse("Autenticação necessária.", {
-    status: 401,
-    headers: {
-      "WWW-Authenticate": 'Basic realm="Loja do Ouro Dashboard", charset="UTF-8"',
-      "Cache-Control": "no-store",
-    },
-  });
+  const login = new URL("/login", request.url);
+  const redirect = `${request.nextUrl.pathname}${request.nextUrl.search}`;
+  if (redirect.startsWith("/") && !redirect.startsWith("//")) login.searchParams.set("redirect", redirect);
+  return NextResponse.redirect(login);
 }
 
 export const config = {
