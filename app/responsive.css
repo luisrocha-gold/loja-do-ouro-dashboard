@@ -1,0 +1,232 @@
+/* Responsive readability layer for Business Control Center v3 */
+
+/* Large desktop: preserve detail, improve legibility and breathing room */
+@media (min-width: 1280px) {
+  .shell { width: min(1680px, calc(100% - 64px)); }
+  .topbar { min-height: 82px; gap: 26px; }
+  .brand > span { width: 48px; height: 48px; font-size: 16px; }
+  .brand strong { font-size: 21px; }
+  .brand small { font-size: 10px; }
+  .topbar nav a { font-size: 11px; padding: 9px 11px; }
+  .picker label { font-size: 9px; }
+  .picker input, .picker button, .logout { font-size: 12px; }
+
+  .hero { padding: 46px 4px 30px; }
+  .hero > div > span, .panel-head > div > span { font-size: 10px; }
+  .hero h1 { font-size: clamp(46px, 4vw, 62px); }
+  .hero p { font-size: 14px; }
+  .hero aside span { font-size: 9px; }
+  .hero aside strong { font-size: 12px; }
+
+  .pulse-grid, .kpis, .cols, .ops-grid, .decision-grid { gap: 16px; }
+  .pulse, .kpi, .panel { border-radius: 18px; }
+  .pulse { padding: 22px; }
+  .pulse-head span { font-size: 11px; }
+  .pulse-head small { font-size: 10px; }
+  .pulse > strong { font-size: 38px; margin: 18px 0 13px; }
+  .pulse-metrics span, .pulse-email small { font-size: 10px; }
+  .pulse-email span { font-size: 9px; }
+  .pulse-email b { font-size: 12px; }
+
+  .kpi { min-height: 188px; padding: 22px; }
+  .kpi > span { font-size: 10px; }
+  .kpi > strong { font-size: 36px; margin: 20px 0 8px; }
+  .kpi p { font-size: 11px; line-height: 1.45; }
+  .delta { font-size: 10px; }
+
+  .panel { padding: 26px; margin-bottom: 16px; }
+  .panel-head { margin-bottom: 23px; }
+  .panel-head h2 { font-size: 30px; }
+  .pill { font-size: 9px; padding: 7px 11px; }
+  .mini-total span, .risk > span { font-size: 9px; }
+  .mini-total strong { font-size: 28px; }
+
+  .spend-cards span, .source strong, .leak-grid article span,
+  .funnel-step span, .flow-list strong, .rank-list strong, .quality-list strong { font-size: 11px; }
+  .spend-cards small, .source small, .leak-grid article small,
+  .funnel-step small, .flow-list small, .rank-list small, .quality-list small,
+  .method, .geo-note { font-size: 9.5px; line-height: 1.55; }
+  .spend-cards strong { font-size: 28px; }
+  .source { grid-template-columns: 160px 1fr 58px; gap: 12px; }
+  .source-wrap { grid-template-columns: 1fr 190px; gap: 26px; }
+  .source-wrap aside > strong { font-size: 54px; }
+  .source-wrap aside > b { font-size: 25px; }
+
+  .finance-grid > div, .mini-kpis > div { padding: 17px; }
+  .finance-grid span, .mini-kpis span { font-size: 9px; }
+  .finance-grid strong, .mini-kpis strong { font-size: 25px; }
+  .finance-grid small { font-size: 9px; }
+
+  .funnel-step > div { grid-template-columns: 190px 115px 1fr; }
+  .funnel-step strong { font-size: 26px; }
+  .funnel-step > i { height: 11px; }
+  .funnel-foot span { font-size: 10px; padding: 10px 12px; }
+
+  .leak-grid article { padding: 20px; gap: 14px; }
+  .leak-grid article > i { width: 36px; height: 36px; font-size: 9px; }
+  .leak-grid article strong { font-size: 34px; }
+  .risk strong { font-size: 34px; }
+
+  .chart { height: 260px; }
+  .day > div { height: 215px; }
+  .day > small { font-size: 9px; }
+
+  .crm-grid { gap: 20px; }
+  .crm-grid h3 { font-size: 22px; }
+  table { font-size: 10px; }
+  th { font-size: 8.5px; padding: 12px; }
+  td { padding: 12px; }
+  .name small { font-size: 8.5px; }
+  .badge, .opp { font-size: 8.5px; }
+
+  .recommendations article { padding: 18px; }
+  .recommendations h3 { font-size: 21px; }
+  .recommendations p, .recommendations article > div:not(.rec-top), .recommendations article footer { font-size: 10px; }
+  .recommendations b, .rec-top small, .priority { font-size: 8.5px; }
+  .site-footer { font-size: 9.5px; }
+}
+
+/* Desktop/laptop: avoid squeezing six KPI cards into unreadable columns */
+@media (min-width: 1024px) and (max-width: 1500px) {
+  .shell { width: min(1440px, calc(100% - 42px)); }
+  .kpis { grid-template-columns: repeat(3, 1fr); }
+  .kpi { min-height: 166px; }
+  .kpi > span { font-size: 9px; }
+  .kpi > strong { font-size: 31px; }
+  .kpi p { font-size: 10px; }
+  .pulse-head span { font-size: 10px; }
+  .pulse-metrics span { font-size: 9px; }
+  .panel-head h2 { font-size: 26px; }
+  table { font-size: 9px; }
+  th { font-size: 8px; }
+  td { padding: 10px; }
+}
+
+/* Tablet: convert dense sections into stacked cards while retaining all metrics */
+@media (min-width: 700px) and (max-width: 1023px) {
+  .shell { width: calc(100% - 28px); }
+  .topbar { position: relative; flex-wrap: wrap; padding: 12px 0; }
+  .topbar nav { display: none; }
+  .top-actions { width: 100%; }
+  .picker { flex: 1; }
+  .pulse-grid { grid-template-columns: 1fr; }
+  .kpis { grid-template-columns: repeat(2, 1fr); }
+  .finance-grid { grid-template-columns: repeat(2, 1fr); }
+  .cols, .crm-grid, .decision-grid, .ops-grid { grid-template-columns: 1fr; }
+  .ops-grid .panel:last-child { grid-column: auto; }
+  .source-wrap { grid-template-columns: 1fr; }
+  .source-wrap aside { border-left: 0; border-top: 1px solid var(--line); padding: 16px 0 0; }
+  .leak-grid { grid-template-columns: 1fr; }
+  .recommendations { grid-template-columns: 1fr 1fr; }
+  .panel { padding: 20px; }
+  .panel-head h2 { font-size: 25px; }
+  .table { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+}
+
+/* Mobile: not a shrunken desktop. Prioritize scanning and touch targets. */
+@media (max-width: 699px) {
+  body { overflow-x: hidden; }
+  .shell { width: calc(100% - 20px); padding-bottom: 28px; }
+  .topbar { position: relative; display: grid; grid-template-columns: 1fr auto; gap: 10px; padding: 12px 0; }
+  .brand { min-width: 0; }
+  .brand > span { width: 40px; height: 40px; }
+  .brand strong { font-size: 17px; }
+  .brand small { font-size: 8px; }
+  .topbar nav { display: none; }
+  .top-actions { grid-column: 1 / -1; width: 100%; display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: end; }
+  .picker { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 8px; }
+  .picker label { font-size: 8px; padding-left: 0; }
+  .picker input { width: 100%; font-size: 12px; }
+  .picker button { grid-column: 1 / -1; min-height: 42px; font-size: 12px; }
+  .logout { min-height: 42px; font-size: 12px; padding-inline: 14px; }
+
+  .hero { padding: 26px 1px 18px; align-items: stretch; flex-direction: column; }
+  .hero > div > span { font-size: 9px; }
+  .hero h1 { font-size: 36px; line-height: 1.02; }
+  .hero p { font-size: 12px; line-height: 1.5; }
+  .hero aside { width: 100%; }
+  .hero aside span { font-size: 8px; }
+  .hero aside strong { font-size: 10px; }
+
+  .pulse-grid, .kpis, .cols, .ops-grid, .decision-grid, .crm-grid { grid-template-columns: 1fr; gap: 10px; }
+  .pulse, .kpi, .panel { border-radius: 14px; }
+  .pulse { padding: 18px; }
+  .pulse-head span { font-size: 10px; }
+  .pulse-head small { font-size: 9px; }
+  .pulse > strong { font-size: 34px; }
+  .pulse-metrics { grid-template-columns: 1fr 1fr; }
+  .pulse-metrics span { font-size: 9px; }
+
+  .kpi { min-height: 0; padding: 18px; }
+  .kpi > span { font-size: 9px; }
+  .kpi > strong { font-size: 32px; margin: 15px 0 6px; }
+  .kpi p { font-size: 10px; }
+  .delta { font-size: 9px; }
+
+  .panel { padding: 17px; margin-bottom: 10px; }
+  .panel-head { flex-direction: column; gap: 8px; margin-bottom: 16px; }
+  .panel-head h2 { font-size: 25px; line-height: 1.08; }
+  .panel-head > div > span { font-size: 9px; }
+  .pill { font-size: 8px; white-space: normal; }
+  .mini-total, .risk { align-items: flex-start; }
+  .mini-total strong, .risk strong { font-size: 27px; }
+
+  .spend-cards { grid-template-columns: 1fr; }
+  .spend-cards > div { padding: 15px; }
+  .spend-cards span { font-size: 9px; }
+  .spend-cards strong { font-size: 25px; }
+  .spend-cards small { font-size: 8px; }
+
+  .source-wrap { grid-template-columns: 1fr; gap: 16px; }
+  .source { grid-template-columns: 105px 1fr 42px; gap: 8px; }
+  .source strong { font-size: 9px; }
+  .source small { font-size: 8px; }
+  .source-wrap aside { border-left: 0; border-top: 1px solid var(--line); padding: 15px 0 0; }
+  .source-wrap aside > strong { font-size: 42px; }
+
+  .finance-grid, .mini-kpis { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .finance-grid > div, .mini-kpis > div { padding: 12px; }
+  .finance-grid span, .mini-kpis span { font-size: 8px; }
+  .finance-grid strong, .mini-kpis strong { font-size: 20px; }
+  .finance-grid small { font-size: 8px; }
+
+  .funnel-step > div { grid-template-columns: 1fr auto; gap: 8px; }
+  .funnel-step span { font-size: 10px; }
+  .funnel-step strong { font-size: 22px; }
+  .funnel-step small { grid-column: 1 / -1; font-size: 8px; }
+  .funnel-foot { display: grid; grid-template-columns: 1fr; }
+  .funnel-foot span { font-size: 9px; }
+
+  .leak-grid { grid-template-columns: 1fr; }
+  .leak-grid article { grid-template-columns: 32px 1fr; padding: 15px; }
+  .leak-grid article > .delta { grid-column: 2; }
+  .leak-grid article span { font-size: 9px; }
+  .leak-grid article small { font-size: 8px; }
+
+  .chart { display: flex; overflow-x: auto; gap: 10px; padding-bottom: 4px; -webkit-overflow-scrolling: touch; }
+  .day { min-width: 54px; }
+
+  .crm-grid h3 { font-size: 19px; }
+  .table { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { min-width: 760px; font-size: 9px; }
+  th { font-size: 7.5px; padding: 10px; }
+  td { padding: 10px; }
+  .table.compact table { min-width: 680px; }
+  .geo-note, .method { font-size: 8.5px; line-height: 1.55; }
+
+  .ops-grid .panel:last-child { grid-column: auto; }
+  .recommendations { grid-template-columns: 1fr; }
+  .recommendations article { padding: 15px; }
+  .recommendations h3 { font-size: 19px; }
+  .recommendations p { font-size: 9px; }
+  .quality-list strong { font-size: 9px; }
+  .quality-list small { font-size: 8px; }
+  .site-footer { flex-direction: column; font-size: 8.5px; }
+}
+
+@media (max-width: 420px) {
+  .finance-grid, .mini-kpis { grid-template-columns: 1fr; }
+  .pulse-metrics { grid-template-columns: 1fr; }
+  .source { grid-template-columns: 92px 1fr 38px; }
+  .hero h1 { font-size: 32px; }
+}
