@@ -49,9 +49,11 @@ type ShopifyOrderRow = {
   order_name?: string;
   order_cancelled_at?: string | null;
   order_financial_status?: string | null;
+  order_count?: number | string | null;
   order_fully_paid?: boolean | string | number | null;
   order_unpaid?: boolean | string | number | null;
   order_total_price?: number | string | null;
+  order_current_total_price?: number | string | null;
   order_total_outstanding_amount?: number | string | null;
   order_cost_of_goods_sold?: number | string | null;
   order_total_discounts?: number | string | null;
@@ -132,19 +134,31 @@ async function windsor<T>(connector: "shopify" | "facebook" | "google_ads", rang
   if (!key) throw new Error("Windsor.ai não configurado no ambiente.");
   const p = new URLSearchParams({ api_key: key, date_from: range.from, date_to: range.to, fields: fields.join(","), _renderer: "json" });
   if (account) p.set("select_accounts", account);
-  const r = await fetch(`https://connectors.windsor.ai/${connector}?${p}`, { cache: "no-store", headers: { "User-Agent": "LojaDoOuroDashboard/3.0" } });
+  const r = await fetch(`https://connectors.windsor.ai/${connector}?${p}`, { cache: "no-store", headers: { "User-Agent": "LojaDoOuroDashboard/3.1" } });
   if (!r.ok) throw new Error(`Windsor ${connector} respondeu ${r.status}.`);
   return normalize(await r.json()) as T[];
 }
 
 async function shopifyOrders(range: Period) {
   return windsor<ShopifyOrderRow>("shopify", range, [
-    "order_created_at","order_id","order_name","order_cancelled_at","order_financial_status","order_fully_paid","order_unpaid","order_total_price","order_total_outstanding_amount","order_cost_of_goods_sold","order_total_discounts","order_refunds_subtotal","order_new_or_returning_customer","order_payment_gateways","order_fulfillment_status","order_customer_last_visit_source","order_customer_last_visit_referrer_url","order_customer_last_visit_utm_source","order_customer_last_visit_utm_medium","order_customer_last_visit_utm_campaign","order_customer_last_visit_utm_content","order_registered_source_url","order_source_name"
+    "order_created_at","order_id","order_name","order_cancelled_at","order_financial_status","order_count","order_fully_paid","order_unpaid","order_total_price","order_current_total_price","order_total_outstanding_amount","order_cost_of_goods_sold","order_total_discounts","order_refunds_subtotal","order_new_or_returning_customer","order_payment_gateways","order_fulfillment_status","order_customer_last_visit_source","order_customer_last_visit_referrer_url","order_customer_last_visit_utm_source","order_customer_last_visit_utm_medium","order_customer_last_visit_utm_campaign","order_customer_last_visit_utm_content","order_registered_source_url","order_source_name"
   ], env("WINDSOR_SHOPIFY_ACCOUNT_ID") || SHOPIFY_ACCOUNT);
 }
 
 async function abandonedCheckouts(range: Period) {
   return windsor<ShopifyCheckoutRow>("shopify", range, ["abandoned_checkout_created_at","abandoned_checkout_id","abandoned_checkout_name","abandoned_checkout_total_price","abandoned_checkout_completed_at"], env("WINDSOR_SHOPIFY_ACCOUNT_ID") || SHOPIFY_ACCOUNT);
+}
+
+function orderCount(o: ShopifyOrderRow) {
+  return Math.max(0, num(o.order_count));
+}
+
+function orderValue(o: ShopifyOrderRow) {
+  return num(o.order_current_total_price ?? o.order_total_price);
+}
+
+function isCanonicalOrderRow(o: ShopifyOrderRow) {
+  return orderCount(o) > 0;
 }
 
 function attributionText(o: ShopifyOrderRow) {
@@ -153,7 +167,7 @@ function attributionText(o: ShopifyOrderRow) {
 
 export function attributeOrder(o: ShopifyOrderRow): Channel {
   const t = attributionText(o);
-  if (/klaviyo|newsletter|e-?mail|email/.test(t)) return "Newsletter";
+  if (/klaviyo|newsletter/.test(t)) return "Newsletter";
   if (/instagram|(^|\W)ig(\W|$)/.test(t)) return "Instagram";
   if (/facebook|fb\.com|fbclid|(^|\W)fb(\W|$)/.test(t)) return "Facebook";
   if (/google|gclid/.test(t)) return "Google";
@@ -161,7 +175,7 @@ export function attributeOrder(o: ShopifyOrderRow): Channel {
 }
 
 function isPaid(o: ShopifyOrderRow) {
-  if (o.order_cancelled_at) return false;
+  if (!isCanonicalOrderRow(o) || o.order_cancelled_at) return false;
   const status = String(o.order_financial_status ?? "").toUpperCase();
   if (["PAID", "PARTIALLY_REFUNDED"].includes(status)) return true;
   if (["VOIDED", "REFUNDED", "EXPIRED", "PENDING", "AUTHORIZED", "PARTIALLY_PAID"].includes(status)) return false;
@@ -169,9 +183,9 @@ function isPaid(o: ShopifyOrderRow) {
 }
 
 function isUnpaid(o: ShopifyOrderRow) {
-  if (o.order_cancelled_at || isPaid(o)) return false;
+  if (!isCanonicalOrderRow(o) || o.order_cancelled_at || isPaid(o)) return false;
   const status = String(o.order_financial_status ?? "").toUpperCase();
-  if (["VOIDED", "REFUNDED"].includes(status)) return false;
+  if (["VOIDED", "REFUNDED", "EXPIRED"].includes(status)) return false;
   return bool(o.order_unpaid) || num(o.order_total_outstanding_amount) > 0;
 }
 
@@ -224,25 +238,32 @@ export async function getSnapshot(range: Period): Promise<Snapshot> {
   if(rs[2].status==="fulfilled") mr=rs[2].value; else warnings.push(`Meta via Windsor: ${String(rs[2].reason?.message || rs[2].reason)}`);
   if(rs[3].status==="fulfilled") gr=rs[3].value; else warnings.push(`Google via Windsor: ${String(rs[3].reason?.message || rs[3].reason)}`);
 
-  const po=os.filter(isPaid); const revenue=po.reduce((s,o)=>s+num(o.order_total_price),0); const cogs=po.reduce((s,o)=>s+Math.max(0,num(o.order_cost_of_goods_sold)),0); const grossProfit=revenue-cogs;
-  const discounts=po.reduce((s,o)=>s+Math.max(0,num(o.order_total_discounts)),0); const refunds=os.reduce((s,o)=>s+Math.max(0,num(o.order_refunds_subtotal)),0);
+  const po=os.filter(isPaid);
+  const paidOrders=po.reduce((s,o)=>s+orderCount(o),0);
+  const revenue=po.reduce((s,o)=>s+orderValue(o),0);
+  const cogs=po.reduce((s,o)=>s+Math.max(0,num(o.order_cost_of_goods_sold)),0);
+  const grossProfit=revenue-cogs;
+  const discounts=po.reduce((s,o)=>s+Math.max(0,num(o.order_total_discounts)),0);
+  const refunds=os.filter(isCanonicalOrderRow).reduce((s,o)=>s+Math.max(0,num(o.order_refunds_subtotal)),0);
   const sources=Object.fromEntries(CHANNELS.map(c=>[c,{orders:0,revenue:0}])) as Snapshot["sources"];
   const pm=new Map<string,{name:string;orders:number;revenue:number}>(); const fm=new Map<string,{status:string;orders:number;revenue:number}>();
   let newCustomerOrders=0, returningCustomerOrders=0;
   po.forEach(o=>{
-    const c=attributeOrder(o); sources[c].orders++; sources[c].revenue+=num(o.order_total_price);
-    const customer=String(o.order_new_or_returning_customer || "").toLowerCase(); if(customer==="new") newCustomerOrders++; else if(customer==="returning") returningCustomerOrders++;
-    const method=gatewayName(o.order_payment_gateways); const pe=pm.get(method)||{name:method,orders:0,revenue:0}; pe.orders++; pe.revenue+=num(o.order_total_price); pm.set(method,pe);
-    const status=String(o.order_fulfillment_status || "Não preparado").replaceAll("_"," "); const fe=fm.get(status)||{status,orders:0,revenue:0}; fe.orders++; fe.revenue+=num(o.order_total_price); fm.set(status,fe);
+    const count=orderCount(o), value=orderValue(o), c=attributeOrder(o);
+    sources[c].orders+=count; sources[c].revenue+=value;
+    const customer=String(o.order_new_or_returning_customer || "").toLowerCase(); if(customer==="new") newCustomerOrders+=count; else if(customer==="returning") returningCustomerOrders+=count;
+    const method=gatewayName(o.order_payment_gateways); const pe=pm.get(method)||{name:method,orders:0,revenue:0}; pe.orders+=count; pe.revenue+=value; pm.set(method,pe);
+    const status=String(o.order_fulfillment_status || "Não preparado").replaceAll("_"," "); const fe=fm.get(status)||{status,orders:0,revenue:0}; fe.orders+=count; fe.revenue+=value; fm.set(status,fe);
   });
   const unpaid=os.filter(isUnpaid), open=cs.filter(c=>!c.abandoned_checkout_completed_at), recovered=cs.filter(c=>!!c.abandoned_checkout_completed_at);
+  const unpaidOrders=unpaid.reduce((s,o)=>s+orderCount(o),0);
   const metaSpend=mr.reduce((s,r)=>s+num(r.spend),0), googleSpend=gr.reduce((s,r)=>s+num(r.spend),0), totalSpend=metaSpend+googleSpend;
   const dm=new Map(days(range).map(date=>[date,{date,revenue:0,orders:0,metaSpend:0,googleSpend:0}]));
-  po.forEach(o=>{const date=o.order_created_at?.slice(0,10),d=date?dm.get(date):undefined;if(d){d.orders++;d.revenue+=num(o.order_total_price);}});
+  po.forEach(o=>{const date=o.order_created_at?.slice(0,10),d=date?dm.get(date):undefined;if(d){d.orders+=orderCount(o);d.revenue+=orderValue(o);}});
   mr.forEach(r=>{const d=r.date?dm.get(r.date.slice(0,10)):undefined;if(d)d.metaSpend+=num(r.spend);});
   gr.forEach(r=>{const d=r.date?dm.get(r.date.slice(0,10)):undefined;if(d)d.googleSpend+=num(r.spend);});
 
-  return { range, generatedAt:new Date().toISOString(), revenue, orders:po.length, aov:po.length?revenue/po.length:0, cogs, grossProfit, grossMarginPct:revenue?grossProfit/revenue*100:null, discounts, refunds, newCustomerOrders, returningCustomerOrders, paymentMethods:[...pm.values()].sort((a,b)=>b.revenue-a.revenue), fulfillment:[...fm.values()].sort((a,b)=>b.orders-a.orders), metaSpend, googleSpend, totalSpend, blendedRoas:totalSpend?revenue/totalSpend:null, marketingCostRatio:revenue?totalSpend/revenue*100:null, sources, unpaidOrders:unpaid.length, unpaidValue:unpaid.reduce((s,o)=>s+Math.max(num(o.order_total_outstanding_amount),num(o.order_total_price)),0), abandonedCheckouts:open.length, abandonedValue:open.reduce((s,c)=>s+num(c.abandoned_checkout_total_price),0), recoveredCheckouts:recovered.length, daily:[...dm.values()], campaigns:campaigns(mr,gr), warnings };
+  return { range, generatedAt:new Date().toISOString(), revenue, orders:paidOrders, aov:paidOrders?revenue/paidOrders:0, cogs, grossProfit, grossMarginPct:revenue?grossProfit/revenue*100:null, discounts, refunds, newCustomerOrders, returningCustomerOrders, paymentMethods:[...pm.values()].sort((a,b)=>b.revenue-a.revenue), fulfillment:[...fm.values()].sort((a,b)=>b.orders-a.orders), metaSpend, googleSpend, totalSpend, blendedRoas:totalSpend?revenue/totalSpend:null, marketingCostRatio:revenue?totalSpend/revenue*100:null, sources, unpaidOrders, unpaidValue:unpaid.reduce((s,o)=>s+Math.max(num(o.order_total_outstanding_amount),orderValue(o)),0), abandonedCheckouts:open.length, abandonedValue:open.reduce((s,c)=>s+num(c.abandoned_checkout_total_price),0), recoveredCheckouts:recovered.length, daily:[...dm.values()], campaigns:campaigns(mr,gr), warnings };
 }
 
 export function previousPeriod(r:Period):Period { const a=new Date(`${r.from}T00:00:00Z`), b=new Date(`${r.to}T00:00:00Z`), n=Math.round((b.getTime()-a.getTime())/86400000)+1, e=new Date(a.getTime()-86400000), s=new Date(e.getTime()-(n-1)*86400000); return {from:s.toISOString().slice(0,10),to:e.toISOString().slice(0,10)}; }
