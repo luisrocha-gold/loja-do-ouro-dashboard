@@ -1,33 +1,45 @@
-# Loja do Ouro — Performance Dashboard
+# Loja do Ouro — Business Control Center
 
-Dashboard executivo para centralizar vendas Shopify, atribuição de encomendas e investimento/performance de Meta Ads e Google Ads.
+Dashboard privado de gestão da Loja do Ouro, construído em Next.js e alojado na Vercel.
 
-## Dashboard v2
+## Objetivo
 
-A versão v2 reorganiza a informação por decisão de gestão, em vez de apresentar uma lista extensa de métricas:
+Centralizar vendas, operação, marketing e qualidade de dados num único painel executivo, preservando o detalhe necessário para gestão avançada.
 
-- **Visão executiva:** receita paga, encomendas, ticket médio, investimento total em Ads e ROAS blended.
-- **Investimento em Ads:** Meta Ads e Google Ads separados, com total combinado e comparação com o período anterior.
-- **Origem das encomendas:** Newsletter, Google, Facebook, Instagram e Outros/Direto.
-- **Fugas de receita:** encomendas não pagas, valor por receber, checkouts abandonados e valor potencial não convertido.
-- **Tendência diária:** receita vs. investimento em publicidade.
-- **Detalhe de media:** Meta por campanha; Google agrupado em Brand, Non-Brand, Performance Max e campanhas locais.
+## Fontes
 
-## Metodologia de atribuição
+- Shopify via Windsor.ai — fonte de verdade para encomendas e receita paga
+- Meta Ads via Windsor.ai
+- Google Ads via Windsor.ai
+- Google Analytics 4 via Windsor.ai
+- Klaviyo via Windsor.ai
+- Search Console via Windsor.ai
+- Google Merchant Center via Windsor.ai
 
-O Shopify é a fonte de verdade para encomendas e receita. Cada encomenda paga recebe **uma única origem**, com base no último clique/visita registado no Customer Journey do Shopify, UTMs, source e referrer. Isso evita contar a mesma encomenda simultaneamente em Meta, Google e Newsletter.
+## Interface
 
-As conversões mostradas no detalhe das campanhas são as conversões atribuídas pelas próprias plataformas e servem para otimização de media, não para construir o total de encomendas.
+- Identidade visual oficial da Loja do Ouro e logótipo oficial no header e login
+- Layout desktop premium com tipografia e hierarquia pensadas para utilização diária
+- Layout específico para tablet e mobile
+- KPIs executivos, pulse diário/semanal/mensal e filtros por período
+- CRM, funil, geografia, rentabilidade, campanhas, operação e Decision Center
+- Tabelas completas com scroll horizontal em ecrãs pequenos, sem remover detalhe
 
-## Carrinhos / checkouts abandonados
+## Segurança
 
-O dashboard usa os `abandonedCheckouts` do Shopify. O respetivo montante é apresentado como **valor potencial não convertido**, e não como perda contabilística. O Shopify só cria este registo depois de o visitante avançar suficientemente no checkout.
+- Login por sessão assinada
+- `DASHBOARD_USER`
+- `DASHBOARD_PASSWORD`
+- `DASHBOARD_SESSION_SECRET`
+- `CRON_SECRET`
+- `WINDSOR_API_KEY`
 
-## Fontes de dados
+Nunca colocar segredos no repositório.
 
-- Shopify Admin GraphQL API — encomendas, pagamentos, Customer Journey/UTM e abandoned checkouts.
-- Windsor.ai — Meta Ads e Google Ads.
+## Atualização noturna
 
-## Variáveis de ambiente
+A rota protegida `/api/cron/refresh` é executada diariamente pela Vercel durante a madrugada para validar e pré-aquecer as principais janelas de análise.
 
-Consultar `.env.example`. Nunca guardar tokens ou chaves no repositório.
+## Metodologia
+
+Shopify permanece a fonte de verdade comercial. GA4, Klaviyo, Meta e Google utilizam metodologias de medição e atribuição próprias; por isso os respetivos valores são comparados e auditados, mas não são somados à receita Shopify.

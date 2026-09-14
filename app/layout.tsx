@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./responsive.css";
+import "./professional.css";
 
 export const metadata: Metadata = {
   title: "Loja do Ouro | Business Control Center",
