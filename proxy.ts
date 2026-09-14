@@ -5,17 +5,14 @@ const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/auth/logout"];
 
 export async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
-  const hasLiveDataSecrets = Boolean(process.env.WINDSOR_API_KEY || process.env.SHOPIFY_ADMIN_ACCESS_TOKEN);
   const configured = isAuthConfigured();
 
   if (!configured) {
-    if (hasLiveDataSecrets) {
-      return new NextResponse("Dashboard protection is not configured.", {
-        status: 503,
-        headers: { "Cache-Control": "no-store" },
-      });
-    }
-    return NextResponse.next();
+    if (process.env.NODE_ENV !== "production") return NextResponse.next();
+    return new NextResponse("Dashboard protection is not configured.", {
+      status: 503,
+      headers: { "Cache-Control": "no-store" },
+    });
   }
 
   if (PUBLIC_PATHS.some((p) => path === p || path.startsWith(`${p}/`))) return NextResponse.next();
