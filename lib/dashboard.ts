@@ -1,50 +1,443 @@
 export type Channel = "Newsletter" | "Google" | "Facebook" | "Instagram" | "Outros / Direto";
 export type Period = { from: string; to: string };
-export type CampaignRow = { platform:"Meta"|"Google"; group:string; campaign:string; spend:number; conversions:number; conversionValue:number; roas:number|null; cpa:number|null; ctr:number|null; cpc:number|null };
-export type Snapshot = { range:Period; generatedAt:string; revenue:number; orders:number; aov:number; metaSpend:number; googleSpend:number; totalSpend:number; blendedRoas:number|null; sources:Record<Channel,{orders:number;revenue:number}>; unpaidOrders:number; unpaidValue:number; abandonedCheckouts:number; abandonedValue:number; recoveredCheckouts:number; daily:{date:string;revenue:number;orders:number;metaSpend:number;googleSpend:number}[]; campaigns:CampaignRow[]; warnings:string[] };
+export type CampaignRow = {
+  platform: "Meta" | "Google";
+  group: string;
+  campaign: string;
+  spend: number;
+  conversions: number;
+  conversionValue: number;
+  roas: number | null;
+  cpa: number | null;
+  ctr: number | null;
+  cpc: number | null;
+};
+export type Snapshot = {
+  range: Period;
+  generatedAt: string;
+  revenue: number;
+  orders: number;
+  aov: number;
+  metaSpend: number;
+  googleSpend: number;
+  totalSpend: number;
+  blendedRoas: number | null;
+  sources: Record<Channel, { orders: number; revenue: number }>;
+  unpaidOrders: number;
+  unpaidValue: number;
+  abandonedCheckouts: number;
+  abandonedValue: number;
+  recoveredCheckouts: number;
+  daily: { date: string; revenue: number; orders: number; metaSpend: number; googleSpend: number }[];
+  campaigns: CampaignRow[];
+  warnings: string[];
+};
 
-type MoneyBag={shopMoney?:{amount?:string}};
-type Visit={source?:string|null;sourceDescription?:string|null;referrerUrl?:string|null;utmParameters?:{source?:string|null;medium?:string|null;campaign?:string|null;content?:string|null}|null};
-type Order={id:string;name:string;createdAt:string;cancelledAt?:string|null;displayFinancialStatus?:string|null;fullyPaid?:boolean;unpaid?:boolean;currentTotalPriceSet?:MoneyBag;totalOutstandingSet?:MoneyBag;sourceName?:string|null;registeredSourceUrl?:string|null;customerJourneySummary?:{ready?:boolean;lastVisit?:Visit|null}|null};
-type Checkout={id:string;createdAt:string;completedAt?:string|null;totalPriceSet?:MoneyBag};
-type MetaRow={date?:string;campaign?:string;spend?:number|string;impressions?:number|string;clicks?:number|string;actions_offsite_conversion_fb_pixel_purchase?:number|string;action_values_offsite_conversion_fb_pixel_purchase?:number|string};
-type GoogleRow={date?:string;campaign?:string;campaign_type?:string;advertising_channel_type?:string;spend?:number|string;impressions?:number|string;clicks?:number|string;conversions?:number|string;conversion_value?:number|string};
+type ShopifyOrderRow = {
+  order_created_at?: string;
+  order_id?: string;
+  order_name?: string;
+  order_cancelled_at?: string | null;
+  order_financial_status?: string | null;
+  order_fully_paid?: boolean | string | number | null;
+  order_unpaid?: boolean | string | number | null;
+  order_total_price?: number | string | null;
+  order_total_outstanding_amount?: number | string | null;
+  order_customer_last_visit_source?: string | null;
+  order_customer_last_visit_referrer_url?: string | null;
+  order_customer_last_visit_utm_source?: string | null;
+  order_customer_last_visit_utm_medium?: string | null;
+  order_customer_last_visit_utm_campaign?: string | null;
+  order_customer_last_visit_utm_content?: string | null;
+  order_registered_source_url?: string | null;
+  order_source_name?: string | null;
+};
 
-const CHANNELS:Channel[]=["Newsletter","Google","Facebook","Instagram","Outros / Direto"];
-const num=(v:unknown)=>{const x=typeof v==="number"?v:Number(v??0);return Number.isFinite(x)?x:0};
-const money=(v?:MoneyBag)=>num(v?.shopMoney?.amount);
-const env=(...keys:string[])=>keys.map(k=>process.env[k]).find(Boolean);
-const domain=()=>env("SHOPIFY_STORE_DOMAIN","SHOPIFY_SHOP_DOMAIN","SHOPIFY_SHOP")?.replace(/^https?:\/\//,"").replace(/\/$/,"");
+type ShopifyCheckoutRow = {
+  abandoned_checkout_created_at?: string;
+  abandoned_checkout_id?: string;
+  abandoned_checkout_name?: string;
+  abandoned_checkout_total_price?: number | string | null;
+  abandoned_checkout_completed_at?: string | null;
+};
 
-async function shopify<T>(query:string,variables:Record<string,unknown>):Promise<T>{
-  const shop=domain(),token=env("SHOPIFY_ADMIN_ACCESS_TOKEN","SHOPIFY_ACCESS_TOKEN","SHOPIFY_TOKEN"),version=env("SHOPIFY_API_VERSION")||"2026-07";
-  if(!shop||!token) throw new Error("Shopify não configurado no ambiente.");
-  const r=await fetch(`https://${shop}/admin/api/${version}/graphql.json`,{method:"POST",headers:{"Content-Type":"application/json","X-Shopify-Access-Token":token},body:JSON.stringify({query,variables}),cache:"no-store"});
-  if(!r.ok) throw new Error(`Shopify respondeu ${r.status}.`); const j=await r.json(); if(j.errors?.length) throw new Error(j.errors.map((e:{message:string})=>e.message).join("; ")); return j.data as T;
+type MetaRow = {
+  date?: string;
+  campaign?: string;
+  spend?: number | string;
+  impressions?: number | string;
+  clicks?: number | string;
+  actions_offsite_conversion_fb_pixel_purchase?: number | string;
+  action_values_offsite_conversion_fb_pixel_purchase?: number | string;
+};
+
+type GoogleRow = {
+  date?: string;
+  campaign?: string;
+  campaign_type?: string;
+  advertising_channel_type?: string;
+  spend?: number | string;
+  impressions?: number | string;
+  clicks?: number | string;
+  conversions?: number | string;
+  conversion_value?: number | string;
+};
+
+const CHANNELS: Channel[] = ["Newsletter", "Google", "Facebook", "Instagram", "Outros / Direto"];
+const SHOPIFY_ACCOUNT = "lojadoouro-online.myshopify.com";
+const META_ACCOUNT = "189245068300417";
+const GOOGLE_ACCOUNT = "266-236-4039";
+
+const num = (v: unknown) => {
+  const x = typeof v === "number" ? v : Number(v ?? 0);
+  return Number.isFinite(x) ? x : 0;
+};
+
+const bool = (v: unknown) => {
+  if (typeof v === "boolean") return v;
+  if (typeof v === "number") return v !== 0;
+  return ["true", "1", "yes"].includes(String(v ?? "").trim().toLowerCase());
+};
+
+const env = (...keys: string[]) => keys.map((k) => process.env[k]).find(Boolean);
+
+function normalize(json: unknown): Record<string, unknown>[] {
+  if (Array.isArray(json)) return json;
+  if (json && typeof json === "object") {
+    const o = json as Record<string, unknown>;
+    if (Array.isArray(o.data)) return o.data as Record<string, unknown>[];
+    if (Array.isArray(o.result)) return o.result as Record<string, unknown>[];
+  }
+  return [];
 }
 
-const ORDERS=`query Orders($after:String,$q:String!){orders(first:250,after:$after,query:$q,sortKey:CREATED_AT){pageInfo{hasNextPage endCursor} nodes{id name createdAt cancelledAt displayFinancialStatus fullyPaid unpaid sourceName registeredSourceUrl currentTotalPriceSet{shopMoney{amount}} totalOutstandingSet{shopMoney{amount}} customerJourneySummary{ready lastVisit{source sourceDescription referrerUrl utmParameters{source medium campaign content}}}}}}`;
-const ABANDONED=`query Abandoned($after:String,$q:String!){abandonedCheckouts(first:250,after:$after,query:$q,sortKey:CREATED_AT){pageInfo{hasNextPage endCursor} nodes{id createdAt completedAt totalPriceSet{shopMoney{amount}}}}}`;
+async function windsor<T>(
+  connector: "shopify" | "facebook" | "google_ads",
+  range: Period,
+  fields: string[],
+  account?: string,
+): Promise<T[]> {
+  const key = env("WINDSOR_API_KEY", "WINDSORAI_API_KEY");
+  if (!key) throw new Error("Windsor.ai não configurado no ambiente.");
 
-async function orders(range:Period){const out:Order[]=[];let after:string|null=null;do{const d: {orders:{pageInfo:{hasNextPage:boolean;endCursor:string|null};nodes:Order[]}}=await shopify(ORDERS,{after,q:`created_at:>=${range.from} created_at:<=${range.to}`});out.push(...d.orders.nodes);after=d.orders.pageInfo.hasNextPage?d.orders.pageInfo.endCursor:null}while(after);return out}
-async function abandoned(range:Period){const out:Checkout[]=[];let after:string|null=null;do{const d:{abandonedCheckouts:{pageInfo:{hasNextPage:boolean;endCursor:string|null};nodes:Checkout[]}}=await shopify(ABANDONED,{after,q:`created_at:>=${range.from} created_at:<=${range.to}`});out.push(...d.abandonedCheckouts.nodes);after=d.abandonedCheckouts.pageInfo.hasNextPage?d.abandonedCheckouts.pageInfo.endCursor:null}while(after);return out}
+  const p = new URLSearchParams({
+    api_key: key,
+    date_from: range.from,
+    date_to: range.to,
+    fields: fields.join(","),
+    _renderer: "json",
+  });
+  if (account) p.set("select_accounts", account);
 
-function attributionText(o:Order){const v=o.customerJourneySummary?.lastVisit;return [v?.utmParameters?.source,v?.utmParameters?.medium,v?.utmParameters?.campaign,v?.utmParameters?.content,v?.source,v?.sourceDescription,v?.referrerUrl,o.registeredSourceUrl,o.sourceName].filter(Boolean).join(" ").toLowerCase()}
-export function attributeOrder(o:Order):Channel{const t=attributionText(o);if(/klaviyo|newsletter|e-?mail|email/.test(t))return"Newsletter";if(/instagram|(^|\W)ig(\W|$)/.test(t))return"Instagram";if(/facebook|fb\.com|fbclid/.test(t))return"Facebook";if(/google|gclid/.test(t))return"Google";return"Outros / Direto"}
-const paid=(o:Order)=>!o.cancelledAt&&(o.fullyPaid||["PAID","PARTIALLY_REFUNDED"].includes(o.displayFinancialStatus||""));
+  const r = await fetch(`https://connectors.windsor.ai/${connector}?${p}`, {
+    cache: "no-store",
+    headers: { "User-Agent": "LojaDoOuroDashboard/2.1" },
+  });
 
-function normalize(json:unknown):Record<string,unknown>[]{if(Array.isArray(json))return json;if(json&&typeof json==="object"){const o=json as Record<string,unknown>;if(Array.isArray(o.data))return o.data as Record<string,unknown>[];if(Array.isArray(o.result))return o.result as Record<string,unknown>[]}return[]}
-async function windsor<T>(connector:"facebook"|"google_ads",range:Period,fields:string[],account?:string):Promise<T[]>{const key=env("WINDSOR_API_KEY","WINDSORAI_API_KEY");if(!key)throw new Error("Windsor.ai não configurado no ambiente.");const p=new URLSearchParams({api_key:key,date_from:range.from,date_to:range.to,fields:fields.join(","),_renderer:"json"});if(account)p.set("select_accounts",account);const r=await fetch(`https://connectors.windsor.ai/${connector}?${p}`,{cache:"no-store",headers:{"User-Agent":"LojaDoOuroDashboard/2.0"}});if(!r.ok)throw new Error(`Windsor ${connector} respondeu ${r.status}.`);return normalize(await r.json()) as T[]}
-
-function googleGroup(r:GoogleRow){const c=(r.campaign||"").toLowerCase(),t=`${r.campaign_type||""} ${r.advertising_channel_type||""}`.toLowerCase();if(/performance.?max|pmax/.test(t)||/pmax|performance.?max/.test(c))return"Performance Max";if(/local/.test(t)||/benfica|loures|fátima|fatima|leiria|santar[eé]m|cartaxo|tomar|coimbra|abrantes|torres novas|figueira|entroncamento/.test(c))return"Locais";if(/brand|branded|loja do ouro|lojadoouro/.test(c))return"Brand";return"Non-Brand"}
-function campaigns(meta:MetaRow[],google:GoogleRow[]):CampaignRow[]{const m=new Map<string,CampaignRow&{clicks:number;impressions:number}>();const add=(platform:"Meta"|"Google",group:string,campaign:string,spend:number,conv:number,value:number,clicks:number,impressions:number)=>{const k=`${platform}:${group}:${campaign}`,e=m.get(k)||{platform,group,campaign,spend:0,conversions:0,conversionValue:0,roas:null,cpa:null,ctr:null,cpc:null,clicks:0,impressions:0};e.spend+=spend;e.conversions+=conv;e.conversionValue+=value;e.clicks+=clicks;e.impressions+=impressions;m.set(k,e)};meta.forEach(r=>add("Meta","Campanhas",r.campaign||"Sem nome",num(r.spend),num(r.actions_offsite_conversion_fb_pixel_purchase),num(r.action_values_offsite_conversion_fb_pixel_purchase),num(r.clicks),num(r.impressions)));google.forEach(r=>add("Google",googleGroup(r),r.campaign||"Sem nome",num(r.spend),num(r.conversions),num(r.conversion_value),num(r.clicks),num(r.impressions)));return[...m.values()].map(({clicks,impressions,...r})=>({...r,roas:r.spend?r.conversionValue/r.spend:null,cpa:r.conversions?r.spend/r.conversions:null,ctr:impressions?clicks/impressions*100:null,cpc:clicks?r.spend/clicks:null})).sort((a,b)=>b.spend-a.spend)}
-function days(range:Period){const a=new Date(`${range.from}T00:00:00Z`),b=new Date(`${range.to}T00:00:00Z`),out:string[]=[];for(let d=a;d<=b;d=new Date(d.getTime()+86400000))out.push(d.toISOString().slice(0,10));return out}
-
-export async function getSnapshot(range:Period):Promise<Snapshot>{const warnings:string[]=[];let os:Order[]=[],cs:Checkout[]=[],mr:MetaRow[]=[],gr:GoogleRow[]=[];const rs=await Promise.allSettled([orders(range),abandoned(range),windsor<MetaRow>("facebook",range,["date","campaign","spend","impressions","clicks","actions_offsite_conversion_fb_pixel_purchase","action_values_offsite_conversion_fb_pixel_purchase"],env("WINDSOR_META_ACCOUNT_ID")),windsor<GoogleRow>("google_ads",range,["date","campaign","campaign_type","advertising_channel_type","spend","impressions","clicks","conversions","conversion_value"],env("WINDSOR_GOOGLE_ACCOUNT_ID"))]);
-  if(rs[0].status==="fulfilled")os=rs[0].value;else warnings.push(`Shopify encomendas: ${String(rs[0].reason?.message||rs[0].reason)}`);if(rs[1].status==="fulfilled")cs=rs[1].value;else warnings.push(`Shopify abandonos: ${String(rs[1].reason?.message||rs[1].reason)}`);if(rs[2].status==="fulfilled")mr=rs[2].value;else warnings.push(`Meta via Windsor: ${String(rs[2].reason?.message||rs[2].reason)}`);if(rs[3].status==="fulfilled")gr=rs[3].value;else warnings.push(`Google via Windsor: ${String(rs[3].reason?.message||rs[3].reason)}`);
-  const po=os.filter(paid),revenue=po.reduce((s,o)=>s+money(o.currentTotalPriceSet),0),sources=Object.fromEntries(CHANNELS.map(c=>[c,{orders:0,revenue:0}])) as Snapshot["sources"];po.forEach(o=>{const c=attributeOrder(o);sources[c].orders++;sources[c].revenue+=money(o.currentTotalPriceSet)});const unpaid=os.filter(o=>o.unpaid&&!o.cancelledAt),open=cs.filter(c=>!c.completedAt),recovered=cs.filter(c=>!!c.completedAt),metaSpend=mr.reduce((s,r)=>s+num(r.spend),0),googleSpend=gr.reduce((s,r)=>s+num(r.spend),0),totalSpend=metaSpend+googleSpend;
-  const dm=new Map(days(range).map(date=>[date,{date,revenue:0,orders:0,metaSpend:0,googleSpend:0}]));po.forEach(o=>{const d=dm.get(o.createdAt.slice(0,10));if(d){d.orders++;d.revenue+=money(o.currentTotalPriceSet)}});mr.forEach(r=>{const d=r.date?dm.get(r.date.slice(0,10)):undefined;if(d)d.metaSpend+=num(r.spend)});gr.forEach(r=>{const d=r.date?dm.get(r.date.slice(0,10)):undefined;if(d)d.googleSpend+=num(r.spend)});
-  return{range,generatedAt:new Date().toISOString(),revenue,orders:po.length,aov:po.length?revenue/po.length:0,metaSpend,googleSpend,totalSpend,blendedRoas:totalSpend?revenue/totalSpend:null,sources,unpaidOrders:unpaid.length,unpaidValue:unpaid.reduce((s,o)=>s+Math.max(money(o.totalOutstandingSet),money(o.currentTotalPriceSet)),0),abandonedCheckouts:open.length,abandonedValue:open.reduce((s,c)=>s+money(c.totalPriceSet),0),recoveredCheckouts:recovered.length,daily:[...dm.values()],campaigns:campaigns(mr,gr),warnings};
+  if (!r.ok) throw new Error(`Windsor ${connector} respondeu ${r.status}.`);
+  return normalize(await r.json()) as T[];
 }
-export function previousPeriod(r:Period):Period{const a=new Date(`${r.from}T00:00:00Z`),b=new Date(`${r.to}T00:00:00Z`),n=Math.round((b.getTime()-a.getTime())/86400000)+1,e=new Date(a.getTime()-86400000),s=new Date(e.getTime()-(n-1)*86400000);return{from:s.toISOString().slice(0,10),to:e.toISOString().slice(0,10)}}
-export function defaultRange(n=7):Period{const x=new Date(),e=new Date(Date.UTC(x.getUTCFullYear(),x.getUTCMonth(),x.getUTCDate()-1)),s=new Date(e.getTime()-(n-1)*86400000);return{from:s.toISOString().slice(0,10),to:e.toISOString().slice(0,10)}}
+
+async function shopifyOrders(range: Period) {
+  return windsor<ShopifyOrderRow>(
+    "shopify",
+    range,
+    [
+      "order_created_at",
+      "order_id",
+      "order_name",
+      "order_cancelled_at",
+      "order_financial_status",
+      "order_fully_paid",
+      "order_unpaid",
+      "order_total_price",
+      "order_total_outstanding_amount",
+      "order_customer_last_visit_source",
+      "order_customer_last_visit_referrer_url",
+      "order_customer_last_visit_utm_source",
+      "order_customer_last_visit_utm_medium",
+      "order_customer_last_visit_utm_campaign",
+      "order_customer_last_visit_utm_content",
+      "order_registered_source_url",
+      "order_source_name",
+    ],
+    env("WINDSOR_SHOPIFY_ACCOUNT_ID") || SHOPIFY_ACCOUNT,
+  );
+}
+
+async function abandonedCheckouts(range: Period) {
+  return windsor<ShopifyCheckoutRow>(
+    "shopify",
+    range,
+    [
+      "abandoned_checkout_created_at",
+      "abandoned_checkout_id",
+      "abandoned_checkout_name",
+      "abandoned_checkout_total_price",
+      "abandoned_checkout_completed_at",
+    ],
+    env("WINDSOR_SHOPIFY_ACCOUNT_ID") || SHOPIFY_ACCOUNT,
+  );
+}
+
+function attributionText(o: ShopifyOrderRow) {
+  return [
+    o.order_customer_last_visit_utm_source,
+    o.order_customer_last_visit_utm_medium,
+    o.order_customer_last_visit_utm_campaign,
+    o.order_customer_last_visit_utm_content,
+    o.order_customer_last_visit_source,
+    o.order_customer_last_visit_referrer_url,
+    o.order_registered_source_url,
+    o.order_source_name,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
+export function attributeOrder(o: ShopifyOrderRow): Channel {
+  const t = attributionText(o);
+  if (/klaviyo|newsletter|e-?mail|email/.test(t)) return "Newsletter";
+  if (/instagram|(^|\W)ig(\W|$)/.test(t)) return "Instagram";
+  if (/facebook|fb\.com|fbclid|(^|\W)fb(\W|$)/.test(t)) return "Facebook";
+  if (/google|gclid/.test(t)) return "Google";
+  return "Outros / Direto";
+}
+
+function isPaid(o: ShopifyOrderRow) {
+  if (o.order_cancelled_at) return false;
+  const status = String(o.order_financial_status ?? "").toUpperCase();
+  if (["PAID", "PARTIALLY_REFUNDED"].includes(status)) return true;
+  if (["VOIDED", "REFUNDED", "EXPIRED", "PENDING", "AUTHORIZED", "PARTIALLY_PAID"].includes(status)) return false;
+  return bool(o.order_fully_paid) && num(o.order_total_outstanding_amount) <= 0;
+}
+
+function isUnpaid(o: ShopifyOrderRow) {
+  if (o.order_cancelled_at || isPaid(o)) return false;
+  const status = String(o.order_financial_status ?? "").toUpperCase();
+  if (["VOIDED", "REFUNDED"].includes(status)) return false;
+  return bool(o.order_unpaid) || num(o.order_total_outstanding_amount) > 0;
+}
+
+function googleGroup(r: GoogleRow) {
+  const c = (r.campaign || "").toLowerCase();
+  const t = `${r.campaign_type || ""} ${r.advertising_channel_type || ""}`.toLowerCase();
+  if (/performance.?max|pmax/.test(t) || /pmax|performance.?max/.test(c)) return "Performance Max";
+  if (/local/.test(t) || /benfica|loures|fátima|fatima|leiria|santar[eé]m|cartaxo|tomar|coimbra|abrantes|torres novas|figueira|entroncamento/.test(c)) return "Locais";
+  if (/brand|branded|loja do ouro|lojadoouro/.test(c)) return "Brand";
+  return "Non-Brand";
+}
+
+function campaigns(meta: MetaRow[], google: GoogleRow[]): CampaignRow[] {
+  const m = new Map<string, CampaignRow & { clicks: number; impressions: number }>();
+  const add = (
+    platform: "Meta" | "Google",
+    group: string,
+    campaign: string,
+    spend: number,
+    conv: number,
+    value: number,
+    clicks: number,
+    impressions: number,
+  ) => {
+    const k = `${platform}:${group}:${campaign}`;
+    const e = m.get(k) || {
+      platform,
+      group,
+      campaign,
+      spend: 0,
+      conversions: 0,
+      conversionValue: 0,
+      roas: null,
+      cpa: null,
+      ctr: null,
+      cpc: null,
+      clicks: 0,
+      impressions: 0,
+    };
+    e.spend += spend;
+    e.conversions += conv;
+    e.conversionValue += value;
+    e.clicks += clicks;
+    e.impressions += impressions;
+    m.set(k, e);
+  };
+
+  meta.forEach((r) =>
+    add(
+      "Meta",
+      "Campanhas",
+      r.campaign || "Sem nome",
+      num(r.spend),
+      num(r.actions_offsite_conversion_fb_pixel_purchase),
+      num(r.action_values_offsite_conversion_fb_pixel_purchase),
+      num(r.clicks),
+      num(r.impressions),
+    ),
+  );
+
+  google.forEach((r) =>
+    add(
+      "Google",
+      googleGroup(r),
+      r.campaign || "Sem nome",
+      num(r.spend),
+      num(r.conversions),
+      num(r.conversion_value),
+      num(r.clicks),
+      num(r.impressions),
+    ),
+  );
+
+  return [...m.values()]
+    .map(({ clicks, impressions, ...r }) => ({
+      ...r,
+      roas: r.spend ? r.conversionValue / r.spend : null,
+      cpa: r.conversions ? r.spend / r.conversions : null,
+      ctr: impressions ? (clicks / impressions) * 100 : null,
+      cpc: clicks ? r.spend / clicks : null,
+    }))
+    .sort((a, b) => b.spend - a.spend);
+}
+
+function days(range: Period) {
+  const a = new Date(`${range.from}T00:00:00Z`);
+  const b = new Date(`${range.to}T00:00:00Z`);
+  const out: string[] = [];
+  for (let d = a; d <= b; d = new Date(d.getTime() + 86400000)) out.push(d.toISOString().slice(0, 10));
+  return out;
+}
+
+export async function getSnapshot(range: Period): Promise<Snapshot> {
+  const warnings: string[] = [];
+  let os: ShopifyOrderRow[] = [];
+  let cs: ShopifyCheckoutRow[] = [];
+  let mr: MetaRow[] = [];
+  let gr: GoogleRow[] = [];
+
+  const rs = await Promise.allSettled([
+    shopifyOrders(range),
+    abandonedCheckouts(range),
+    windsor<MetaRow>(
+      "facebook",
+      range,
+      [
+        "date",
+        "campaign",
+        "spend",
+        "impressions",
+        "clicks",
+        "actions_offsite_conversion_fb_pixel_purchase",
+        "action_values_offsite_conversion_fb_pixel_purchase",
+      ],
+      env("WINDSOR_META_ACCOUNT_ID") || META_ACCOUNT,
+    ),
+    windsor<GoogleRow>(
+      "google_ads",
+      range,
+      [
+        "date",
+        "campaign",
+        "campaign_type",
+        "advertising_channel_type",
+        "spend",
+        "impressions",
+        "clicks",
+        "conversions",
+        "conversion_value",
+      ],
+      env("WINDSOR_GOOGLE_ACCOUNT_ID") || GOOGLE_ACCOUNT,
+    ),
+  ]);
+
+  if (rs[0].status === "fulfilled") os = rs[0].value;
+  else warnings.push(`Shopify via Windsor: ${String(rs[0].reason?.message || rs[0].reason)}`);
+
+  if (rs[1].status === "fulfilled") cs = rs[1].value;
+  else warnings.push(`Abandonos Shopify via Windsor: ${String(rs[1].reason?.message || rs[1].reason)}`);
+
+  if (rs[2].status === "fulfilled") mr = rs[2].value;
+  else warnings.push(`Meta via Windsor: ${String(rs[2].reason?.message || rs[2].reason)}`);
+
+  if (rs[3].status === "fulfilled") gr = rs[3].value;
+  else warnings.push(`Google via Windsor: ${String(rs[3].reason?.message || rs[3].reason)}`);
+
+  const po = os.filter(isPaid);
+  const revenue = po.reduce((s, o) => s + num(o.order_total_price), 0);
+  const sources = Object.fromEntries(CHANNELS.map((c) => [c, { orders: 0, revenue: 0 }])) as Snapshot["sources"];
+
+  po.forEach((o) => {
+    const c = attributeOrder(o);
+    sources[c].orders++;
+    sources[c].revenue += num(o.order_total_price);
+  });
+
+  const unpaid = os.filter(isUnpaid);
+  const open = cs.filter((c) => !c.abandoned_checkout_completed_at);
+  const recovered = cs.filter((c) => !!c.abandoned_checkout_completed_at);
+  const metaSpend = mr.reduce((s, r) => s + num(r.spend), 0);
+  const googleSpend = gr.reduce((s, r) => s + num(r.spend), 0);
+  const totalSpend = metaSpend + googleSpend;
+
+  const dm = new Map(days(range).map((date) => [date, { date, revenue: 0, orders: 0, metaSpend: 0, googleSpend: 0 }]));
+
+  po.forEach((o) => {
+    const date = o.order_created_at?.slice(0, 10);
+    const d = date ? dm.get(date) : undefined;
+    if (d) {
+      d.orders++;
+      d.revenue += num(o.order_total_price);
+    }
+  });
+
+  mr.forEach((r) => {
+    const d = r.date ? dm.get(r.date.slice(0, 10)) : undefined;
+    if (d) d.metaSpend += num(r.spend);
+  });
+
+  gr.forEach((r) => {
+    const d = r.date ? dm.get(r.date.slice(0, 10)) : undefined;
+    if (d) d.googleSpend += num(r.spend);
+  });
+
+  return {
+    range,
+    generatedAt: new Date().toISOString(),
+    revenue,
+    orders: po.length,
+    aov: po.length ? revenue / po.length : 0,
+    metaSpend,
+    googleSpend,
+    totalSpend,
+    blendedRoas: totalSpend ? revenue / totalSpend : null,
+    sources,
+    unpaidOrders: unpaid.length,
+    unpaidValue: unpaid.reduce(
+      (s, o) => s + Math.max(num(o.order_total_outstanding_amount), num(o.order_total_price)),
+      0,
+    ),
+    abandonedCheckouts: open.length,
+    abandonedValue: open.reduce((s, c) => s + num(c.abandoned_checkout_total_price), 0),
+    recoveredCheckouts: recovered.length,
+    daily: [...dm.values()],
+    campaigns: campaigns(mr, gr),
+    warnings,
+  };
+}
+
+export function previousPeriod(r: Period): Period {
+  const a = new Date(`${r.from}T00:00:00Z`);
+  const b = new Date(`${r.to}T00:00:00Z`);
+  const n = Math.round((b.getTime() - a.getTime()) / 86400000) + 1;
+  const e = new Date(a.getTime() - 86400000);
+  const s = new Date(e.getTime() - (n - 1) * 86400000);
+  return { from: s.toISOString().slice(0, 10), to: e.toISOString().slice(0, 10) };
+}
+
+export function defaultRange(n = 7): Period {
+  const x = new Date();
+  const e = new Date(Date.UTC(x.getUTCFullYear(), x.getUTCMonth(), x.getUTCDate() - 1));
+  const s = new Date(e.getTime() - (n - 1) * 86400000);
+  return { from: s.toISOString().slice(0, 10), to: e.toISOString().slice(0, 10) };
+}
