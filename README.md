@@ -18,7 +18,7 @@ Centralizar vendas, operação, marketing e qualidade de dados num único painel
 
 ## Interface
 
-- Identidade visual oficial da Loja do Ouro
+- Identidade visual oficial da Loja do Ouro e logótipo oficial no header e login
 - Layout desktop premium com tipografia e hierarquia pensadas para utilização diária
 - Layout específico para tablet e mobile
 - KPIs executivos, pulse diário/semanal/mensal e filtros por período
