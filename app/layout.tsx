@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import TruthfulTrendScale from "./TruthfulTrendScale";
+import DashboardSemantics from "./DashboardSemantics";
 import "./globals.css";
 import "./responsive.css";
 import "./professional.css";
@@ -12,5 +13,5 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="pt-PT"><body>{children}<TruthfulTrendScale /></body></html>;
+  return <html lang="pt-PT"><body>{children}<TruthfulTrendScale /><DashboardSemantics /></body></html>;
 }
