@@ -16,7 +16,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         <div className="login-mark">LO</div>
         <div className="login-copy">
           <span>LOJA DO OURO</span>
-          <h1>Área de administração</h1>
+          <h1>Business Control Center</h1>
           <p>Acesso reservado à gestão. Os dados comerciais e de marketing permanecem protegidos por sessão segura.</p>
         </div>
         {error && (

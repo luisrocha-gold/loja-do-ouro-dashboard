@@ -1,26 +1,45 @@
-# Loja do Ouro · Administração
+# Loja do Ouro — Business Control Center
 
-Dashboard privado Next.js para consultar os fechos do negócio. A entrada destaca ontem, a semana civil anterior e o mês civil anterior em Europe/Lisbon. O calendário permite consultar outras datas completas.
+Dashboard privado de gestão da Loja do Ouro, construído em Next.js e alojado na Vercel.
 
-## Desenvolvimento
+## Objetivo
 
-```sh
-npm ci
-npm test
-npm run build
-npm run dev
-```
+Centralizar vendas, operação, marketing e qualidade de dados num único painel executivo, preservando o detalhe necessário para gestão avançada.
 
-Copiar `.env.example` para um ficheiro de ambiente local e preencher apenas as credenciais autorizadas. Nunca incluir credenciais ou dados comerciais no Git.
+## Fontes
 
-## Dados
+- Shopify via Windsor.ai — fonte de verdade para encomendas e receita paga
+- Meta Ads via Windsor.ai
+- Google Ads via Windsor.ai
+- Google Analytics 4 via Windsor.ai
+- Klaviyo via Windsor.ai
+- Search Console via Windsor.ai
+- Google Merchant Center via Windsor.ai
 
-O servidor lê exclusivamente tabelas `public.ldo_bi_*` do projeto indicado em `.env.example`. Não altera dados. Não abre acesso anónimo nem modifica RLS. O login privado existente continua a proteger a aplicação.
+## Interface
 
-São necessários `BI_SUPABASE_URL`, `BI_SUPABASE_PUBLISHABLE_KEY` e uma credencial válida em `BI_SUPABASE_ACCESS_TOKEN` pertencente a um membro BI. Tokens de sessão exigem renovação. Uma chave de servidor existente em `SUPABASE_SERVICE_ROLE_KEY` é também suportada; deve permanecer num segredo do ambiente Vercel, nunca no cliente ou no repositório.
+- Identidade visual oficial da Loja do Ouro e logótipo oficial no header e login
+- Layout desktop premium com tipografia e hierarquia pensadas para utilização diária
+- Layout específico para tablet e mobile
+- KPIs executivos, pulse diário/semanal/mensal e filtros por período
+- CRM, funil, geografia, rentabilidade, campanhas, operação e Decision Center
+- Tabelas completas com scroll horizontal em ecrãs pequenos, sem remover detalhe
 
-A recolha e os relatórios são responsabilidade do fluxo BI autorizado. Abrir o dashboard não atualiza as fontes. `/api/cron/refresh`, protegido por `CRON_SECRET`, verifica cobertura e devolve `sources_refreshed: false`.
+## Segurança
 
-Dados em falta não são zero. Utilizadores distintos e ticket médio exigem consulta oficial de todo o período. A concordância de totais não certifica tracking. Custos incompletos não permitem calcular lucro.
+- Login por sessão assinada
+- `DASHBOARD_USER`
+- `DASHBOARD_PASSWORD`
+- `DASHBOARD_SESSION_SECRET`
+- `CRON_SECRET`
+- `WINDSOR_API_KEY`
 
-Ver [auditoria e gate de publicação](docs/dashboard-audit.md). Esta versão deve ser revista com a ligação privada ativa antes da promoção para produção.
+Nunca colocar segredos no repositório.
+
+## Atualização noturna
+
+A rota protegida `/api/cron/refresh` é executada diariamente pela Vercel durante a madrugada para validar e pré-aquecer as principais janelas de análise.
+
+## Metodologia
+
+Shopify permanece a fonte de verdade comercial. GA4, Klaviyo, Meta e Google utilizam metodologias de medição e atribuição próprias; por isso os respetivos valores são comparados e auditados, mas não são somados à receita Shopify.

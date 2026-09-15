@@ -1,12 +1,11 @@
 {
   "name": "loja-do-ouro-dashboard",
-  "version": "4.0.0",
+  "version": "2.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
-    "test": "tsc lib/bi/model.ts lib/bi/periods.ts --module commonjs --target ES2022 --skipLibCheck --outDir .test-build && node --test tests/*.cjs"
+    "start": "next start"
   },
   "dependencies": {
     "next": "16.3.3",

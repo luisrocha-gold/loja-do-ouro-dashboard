@@ -1,0 +1,56 @@
+.brand>span,.login-mark{
+  font-size:0!important;
+  color:transparent!important;
+  letter-spacing:0!important;
+  border:0!important;
+  background-color:transparent!important;
+  background-image:url("https://res.cloudinary.com/vbnyvvyq/image/upload/e_trim:10,q_100,f_png/v1788866860/Logo_LojaOuro_Vector1_1.png")!important;
+  background-repeat:no-repeat!important;
+  background-size:contain!important;
+  box-shadow:none!important;
+  image-rendering:auto!important;
+  transform:translateZ(0);
+}
+
+.topbar{
+  min-height:110px!important;
+}
+
+.brand{
+  gap:18px!important;
+  align-items:center!important;
+}
+
+.brand>span{
+  display:block!important;
+  width:260px!important;
+  height:88px!important;
+  flex:0 0 260px!important;
+  background-position:left center!important;
+}
+
+.login-mark{
+  display:block!important;
+  width:380px!important;
+  height:142px!important;
+  margin:0 auto 24px!important;
+  background-position:center!important;
+}
+
+@media(max-width:1023px){
+  .topbar{min-height:118px!important;padding-top:12px!important;padding-bottom:12px!important}
+  .brand>span{width:250px!important;height:86px!important;flex-basis:250px!important}
+}
+
+@media(max-width:820px){
+  .brand>span{width:240px!important;height:84px!important;flex-basis:240px!important}
+  .brand{gap:12px!important}
+}
+
+@media(max-width:520px){
+  .topbar{min-height:104px!important}
+  .brand>span{width:200px!important;height:72px!important;flex-basis:200px!important}
+  .brand strong{font-size:15px!important}
+  .brand small{font-size:7px!important}
+  .login-mark{width:min(330px,88vw)!important;height:126px!important}
+}
