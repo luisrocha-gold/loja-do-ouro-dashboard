@@ -1,45 +1,28 @@
-# Loja do Ouro — Business Control Center
+# Loja do Ouro · Administração
 
-Dashboard privado de gestão da Loja do Ouro, construído em Next.js e alojado na Vercel.
+Dashboard privado Next.js para consultar os fechos do negócio. A entrada destaca ontem, a semana civil anterior e o mês civil anterior em Europe/Lisbon. O calendário permite consultar outras datas completas.
 
-## Objetivo
+## Desenvolvimento
 
-Centralizar vendas, operação, marketing e qualidade de dados num único painel executivo, preservando o detalhe necessário para gestão avançada.
+```sh
+npm ci
+npm test
+npm run build
+npm run dev
+```
 
-## Fontes
+Copiar `.env.example` para um ficheiro de ambiente local e preencher apenas as credenciais autorizadas. Nunca incluir credenciais ou dados comerciais no Git.
 
-- Shopify via Windsor.ai — fonte de verdade para encomendas e receita paga
-- Meta Ads via Windsor.ai
-- Google Ads via Windsor.ai
-- Google Analytics 4 via Windsor.ai
-- Klaviyo via Windsor.ai
-- Search Console via Windsor.ai
-- Google Merchant Center via Windsor.ai
+## Dados
 
-## Interface
+O servidor lê as tabelas `public.ldo_bi_*` quando a ligação privada está configurada. Na sua ausência, mantém a leitura direta através da chave Windsor já existente em produção. Não altera dados, acesso anónimo ou RLS. O login privado existente continua a proteger a aplicação.
 
-- Identidade visual oficial da Loja do Ouro e logótipo oficial no header e login
-- Layout desktop premium com tipografia e hierarquia pensadas para utilização diária
-- Layout específico para tablet e mobile
-- KPIs executivos, pulse diário/semanal/mensal e filtros por período
-- CRM, funil, geografia, rentabilidade, campanhas, operação e Decision Center
-- Tabelas completas com scroll horizontal em ecrãs pequenos, sem remover detalhe
+São necessários `BI_SUPABASE_URL`, `BI_SUPABASE_PUBLISHABLE_KEY` e uma credencial válida em `BI_SUPABASE_ACCESS_TOKEN` pertencente a um membro BI. Tokens de sessão exigem renovação. Uma chave de servidor existente em `SUPABASE_SERVICE_ROLE_KEY` é também suportada; deve permanecer num segredo do ambiente Vercel, nunca no cliente ou no repositório.
 
-## Segurança
+A recolha guardada e os relatórios são responsabilidade do fluxo BI autorizado. O modo direto consulta os conectores, que podem servir cache upstream, e distingue os valores observados dos fechos oficiais. `/api/cron/refresh`, protegido por `CRON_SECRET`, verifica cobertura guardada e devolve `sources_refreshed: false`.
 
-- Login por sessão assinada
-- `DASHBOARD_USER`
-- `DASHBOARD_PASSWORD`
-- `DASHBOARD_SESSION_SECRET`
-- `CRON_SECRET`
-- `WINDSOR_API_KEY`
+Dados em falta não são zero. Utilizadores distintos e ticket médio exigem consulta oficial de todo o período. A concordância de totais não certifica tracking. Custos incompletos não permitem calcular lucro.
 
-Nunca colocar segredos no repositório.
+No modo direto, Shopify representa uma coorte recolhida pela data de criação portuguesa, com estado observado na consulta e cobertura não certificada. Linhas de reversão são excluídas por `order_count`; conflitos e moedas incompatíveis suspendem os agregados. Não se substituem `total_sales`, `average_order_value` ou MER por valores desta coorte. GA4 consulta utilizadores no período inteiro. Campanhas, ações, públicos, CRM e pesquisa são conjuntos distintos, com limitações explícitas.
 
-## Atualização noturna
-
-A rota protegida `/api/cron/refresh` é executada diariamente pela Vercel durante a madrugada para validar e pré-aquecer as principais janelas de análise.
-
-## Metodologia
-
-Shopify permanece a fonte de verdade comercial. GA4, Klaviyo, Meta e Google utilizam metodologias de medição e atribuição próprias; por isso os respetivos valores são comparados e auditados, mas não são somados à receita Shopify.
+O build de produção verifica login e acesso às quatro fontes principais, sem registar credenciais ou dados comerciais. Uma falha bloqueia a publicação e preserva a versão existente. Ver [auditoria](docs/dashboard-audit.md).

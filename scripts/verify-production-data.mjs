@@ -1,0 +1,43 @@
+// Read-only release gate. Log counts/configuration only, never URLs or secrets.
+if (process.env.VERCEL_ENV !== "production") {
+  console.info("[release-check] Production data gate only runs on production builds.");
+} else {
+  if (!process.env.DASHBOARD_USER || !process.env.DASHBOARD_PASSWORD || !process.env.DASHBOARD_SESSION_SECRET)
+    throw new Error("Release blocked: dashboard login is not configured.");
+  const key=process.env.WINDSOR_API_KEY || process.env.WINDSORAI_API_KEY;
+  const biUrl=process.env.BI_SUPABASE_URL || process.env.SUPABASE_URL;
+  const biToken=process.env.BI_SUPABASE_ACCESS_TOKEN || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!key && !(biUrl && biToken)) throw new Error("Release blocked: no private data source is configured.");
+  if (key && !(biUrl && biToken)) {
+    const today=new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Lisbon",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+    const d=new Date(`${today}T12:00:00Z`); d.setUTCDate(d.getUTCDate()-1); const yesterday=d.toISOString().slice(0,10);
+    const jobs=[
+      ["facebook","189245068300417","date,spend,account_currency,account_timezone"],
+      ["google_ads","266-236-4039","date,spend,account_currency_code,account_time_zone"],
+      ["googleanalytics4","292767515","sessions,totalusers,property_currency,property_timezone"],
+      ["shopify","lojadoouro-online.myshopify.com","order_id,order_count,order_currency,order_created_at,order_current_total_price"],
+    ];
+    const results=await Promise.all(jobs.map(async([connector,account,fields])=>{
+      const params=new URLSearchParams({api_key:key,select_accounts:account,date_from:yesterday,date_to:yesterday,fields,_renderer:"json"});
+      if(connector==="shopify") params.set("report_timezone","Europe/Lisbon");
+      try {
+        const response=await fetch(`https://connectors.windsor.ai/${connector}?${params}`,{signal:AbortSignal.timeout(30000)});
+        if(!response.ok) return {connector,ok:false,status:response.status};
+        const json=await response.json(); const rows=Array.isArray(json)?json:json.data ?? json.result;
+        const cf={facebook:"account_currency",google_ads:"account_currency_code",googleanalytics4:"property_currency"}[connector];
+        const tf={facebook:"account_timezone",google_ads:"account_time_zone",googleanalytics4:"property_timezone"}[connector];
+        const ok=Array.isArray(rows) && (connector==="shopify" || rows.length>0 && rows.every(r=>r[cf]==="EUR" && r[tf]==="Europe/Lisbon"));
+        return {connector,ok,rows:Array.isArray(rows)?rows.length:null};
+      } catch { return {connector,ok:false,error:"Request unavailable"}; }
+    }));
+    console.info("[release-check]",JSON.stringify({login:true,mode:"direct",checks:results}));
+    if(results.some(r=>!r.ok)) throw new Error("Release blocked: data source check failed; previous production remains active.");
+  } else {
+    try {
+      const url=new URL("/rest/v1/ldo_bi_daily?select=metric_date&limit=1",biUrl);
+      const r=await fetch(url,{signal:AbortSignal.timeout(20000),headers:{apikey:process.env.BI_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || biToken,Authorization:`Bearer ${biToken}`}});
+      if(!r.ok || !(await r.json()).length) throw new Error("No readable data");
+      console.info("[release-check]",JSON.stringify({login:true,mode:"stored",readable:true}));
+    } catch { throw new Error("Release blocked: private BI data could not be read."); }
+  }
+}
