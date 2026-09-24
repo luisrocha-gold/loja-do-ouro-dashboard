@@ -1,6 +1,29 @@
 export type Period = { from: string; to: string };
 export type WindowKey = "day" | "week" | "month" | "custom";
 export const TIMEZONE = "Europe/Lisbon";
+
+export const BUSINESS_TIMELINE = [
+  {
+    key: "summer-sales-2026",
+    label: "SALDOS VERÃO",
+    from: "2026-07-10",
+    to: "2026-09-15",
+    kind: "promotion",
+    note: "Saldos em prata e aço.",
+  },
+  {
+    key: "post-sales-2026",
+    label: "PÓS-SALDOS",
+    from: "2026-09-16",
+    to: null,
+    kind: "milestone",
+    note: "Fim dos saldos; catálogo sem aço e sem produtos inferiores a 50 €.",
+  },
+] as const;
+
+export function overlapsPeriod(p: Period, from: string, to: string): boolean {
+  return p.from <= to && p.to >= from;
+}
 export function localDate(now = new Date()): string {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: TIMEZONE,
