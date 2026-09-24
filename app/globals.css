@@ -718,6 +718,23 @@ main {
 .dark-dot {
   background: #263f3b;
 }
+.sale-dot {
+  background: #ead8b7;
+  border: 1px solid #b68d4a;
+}
+.timeline-notice {
+  margin-top: -4px;
+}
+.trend-chart .timeline-label {
+  fill: #9a7a45;
+  font-weight: 700;
+  letter-spacing: 0.35px;
+}
+.trend-chart .timeline-boundary {
+  stroke: #a98952;
+  stroke-width: 1.2;
+  stroke-dasharray: 4 4;
+}
 .legend small {
   margin-left: auto;
   font-size: 12px;
